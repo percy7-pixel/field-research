@@ -26,6 +26,8 @@ export default async function AdminDashboard() {
         <div><p className="eyebrow mb-1">Dashboard</p><h1 className="text-2xl font-semibold tracking-tight">Research desk</h1><p className="text-sm text-ink-3 mt-1">Signed in as {user.email}</p></div>
         <div className="flex gap-2">
           <Link href="/admin/experiments/new" className="btn btn-primary">New Experiment</Link>
+          <Link href="/admin/findings/new" className="btn btn-ghost">New Finding</Link>
+          <Link href="/admin/field-notes/new" className="btn btn-ghost">New Field Note</Link>
           <form action={signOutAction}><button className="btn btn-ghost">Sign out</button></form>
         </div>
       </div>

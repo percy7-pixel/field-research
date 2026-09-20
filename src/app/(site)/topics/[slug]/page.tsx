@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getExperimentsByTopic, getFindingsByTopic, getTopicBySlug, getTopics } from "@/lib/queries/public";
+import { getExperimentsByTopic, getFieldNotesByTopic, getFindingsByTopic, getTopicBySlug, getTopics } from "@/lib/queries/public";
 import { ExperimentCard } from "@/components/ExperimentCard";
 import { Container, EmptyState, PageIntro } from "@/components/Section";
 import { FollowBlock } from "@/components/FollowBlock";
-import { padNumber } from "@/lib/format";
+import { formatDate, padNumber } from "@/lib/format";
 
 export const revalidate = 300;
 
@@ -24,7 +24,7 @@ export default async function TopicPage({ params }: PageProps<"/topics/[slug]">)
   const { slug } = await params;
   const t = await getTopicBySlug(slug);
   if (!t) notFound();
-  const [experiments, findings, topics] = await Promise.all([getExperimentsByTopic(slug), getFindingsByTopic(slug), getTopics()]);
+  const [experiments, findings, notes, topics] = await Promise.all([getExperimentsByTopic(slug), getFindingsByTopic(slug), getFieldNotesByTopic(slug), getTopics()]);
   const topicNames = Object.fromEntries(topics.map((x) => [x.slug, x.name]));
   return (
     <Container>
@@ -47,6 +47,19 @@ export default async function TopicPage({ params }: PageProps<"/topics/[slug]">)
             ))}
           </ul>
         ) : <EmptyState title="No findings in this topic yet." />}
+      </section>
+      <section className="py-8 border-t border-line">
+        <h2 className="text-xl font-semibold tracking-tight mb-4">Field Notes</h2>
+        {notes.length ? (
+          <ul className="divide-y divide-line border-y border-line">
+            {notes.map((n) => (
+              <li key={n.id} className="py-3">
+                <Link href={`/field-notes/${n.slug}`} className="font-medium hover:underline underline-offset-4">{n.title}</Link>
+                <p className="font-mono text-[0.68rem] uppercase tracking-[0.12em] text-ink-3 mt-1">Field note · {formatDate(n.date)}</p>
+              </li>
+            ))}
+          </ul>
+        ) : <EmptyState title="No field notes in this topic yet." />}
       </section>
       <FollowBlock location={`topic-${slug}`} />
     </Container>

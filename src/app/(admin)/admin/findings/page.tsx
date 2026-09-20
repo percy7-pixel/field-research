@@ -1,26 +1,34 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/auth";
-import { formatDate, padNumber } from "@/lib/format";
+import { padNumber } from "@/lib/format";
+import { ContentTable } from "@/components/admin/ContentTable";
+import { setFindingStatusAction } from "../content-actions";
 
-export default async function AdminFindings() {
+export default async function AdminFindings({ searchParams }: PageProps<"/admin/findings">) {
   const { sb } = await requireAdmin();
-  const { data } = await sb.from("findings").select("id, slug, title, status, date, experiment:source_experiment(experiment_number, title)").order("date", { ascending: false });
+  const sp = await searchParams;
+  const status = typeof sp.status === "string" ? sp.status : "";
+  const error = typeof sp.error === "string" ? sp.error : "";
+  let q = sb.from("findings").select("id, slug, title, status, date, updated_at, experiment:source_experiment(experiment_number)").order("date", { ascending: false, nullsFirst: false });
+  if (status === "draft" || status === "published") q = q.eq("status", status);
+  const { data } = await q;
+  const rows = (data ?? []).map((f) => {
+    const ex = Array.isArray(f.experiment) ? f.experiment[0] : f.experiment;
+    return { ...f, meta: ex ? `Source ${padNumber(ex.experiment_number)}` : "No source experiment" };
+  });
   return (
     <div>
-      <p className="eyebrow mb-1">Content</p>
-      <h1 className="text-2xl font-semibold tracking-tight">Findings</h1>
-      <p className="mt-2 text-sm text-ink-3 max-w-prose">V1: findings are managed via SQL (see <code>supabase/seed.sql</code> for the pattern). A findings editor is a planned admin route. Every finding must reference a source experiment.</p>
-      <ul className="mt-6 card divide-y divide-line">
-        {(data ?? []).map((f) => {
-          const ex = Array.isArray(f.experiment) ? f.experiment[0] : f.experiment;
-          return (
-            <li key={f.id} className="p-3 text-sm flex flex-wrap items-center justify-between gap-2">
-              <span><span className="font-medium">{f.title}</span><span className="block text-xs text-ink-3">{ex ? `Source: Experiment ${padNumber(ex.experiment_number)}` : "No source experiment"} · /{f.slug}</span></span>
-              <span className="flex items-center gap-3"><span className={`tag ${f.status === "published" ? "tag-accent" : ""}`}>{f.status}</span><span className="text-xs text-ink-3">{formatDate(f.date)}</span></span>
-            </li>
-          );
-        })}
-        {!data?.length && <li className="p-4 text-sm text-ink-3">No findings yet.</li>}
-      </ul>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div><p className="eyebrow mb-1">Content</p><h1 className="text-2xl font-semibold tracking-tight">Findings</h1><p className="mt-1 text-sm text-ink-3">Every finding must trace back to a source experiment.</p></div>
+        <Link href="/admin/findings/new" className="btn btn-primary">New Finding</Link>
+      </div>
+      {error && <p role="alert" className="mt-4 text-sm text-bad">{error}</p>}
+      <div className="mt-6 flex gap-1.5">
+        {[["", "All"], ["published", "Published"], ["draft", "Drafts"]].map(([v, l]) => (
+          <Link key={v} href={v ? `/admin/findings?status=${v}` : "/admin/findings"} className={`tag ${status === v ? "tag-accent" : ""}`}>{l}</Link>
+        ))}
+      </div>
+      <ContentTable rows={rows} base="/admin/findings" setStatusAction={setFindingStatusAction} emptyLabel={`No findings${status ? ` with status "${status}"` : ""}.`} />
     </div>
   );
 }

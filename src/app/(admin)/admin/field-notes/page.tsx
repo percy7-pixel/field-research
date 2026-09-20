@@ -1,23 +1,29 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/auth";
-import { formatDate } from "@/lib/format";
+import { ContentTable } from "@/components/admin/ContentTable";
+import { setFieldNoteStatusAction } from "../content-actions";
 
-export default async function AdminFieldNotes() {
+export default async function AdminFieldNotes({ searchParams }: PageProps<"/admin/field-notes">) {
   const { sb } = await requireAdmin();
-  const { data } = await sb.from("field_notes").select("id, slug, title, status, date").order("date", { ascending: false });
+  const sp = await searchParams;
+  const status = typeof sp.status === "string" ? sp.status : "";
+  const error = typeof sp.error === "string" ? sp.error : "";
+  let q = sb.from("field_notes").select("id, slug, title, status, date, updated_at").order("date", { ascending: false, nullsFirst: false });
+  if (status === "draft" || status === "published") q = q.eq("status", status);
+  const { data } = await q;
   return (
     <div>
-      <p className="eyebrow mb-1">Content</p>
-      <h1 className="text-2xl font-semibold tracking-tight">Field Notes</h1>
-      <p className="mt-2 text-sm text-ink-3 max-w-prose">V1: field notes are managed via SQL. Nothing is auto-generated — a note exists only when there is something worth noting.</p>
-      <ul className="mt-6 card divide-y divide-line">
-        {(data ?? []).map((n) => (
-          <li key={n.id} className="p-3 text-sm flex items-center justify-between gap-2">
-            <span><span className="font-medium">{n.title}</span><span className="block text-xs text-ink-3">/{n.slug}</span></span>
-            <span className="flex items-center gap-3"><span className={`tag ${n.status === "published" ? "tag-accent" : ""}`}>{n.status}</span><span className="text-xs text-ink-3">{formatDate(n.date)}</span></span>
-          </li>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div><p className="eyebrow mb-1">Content</p><h1 className="text-2xl font-semibold tracking-tight">Field Notes</h1><p className="mt-1 text-sm text-ink-3">Notes on direction, method and observations — not experimental evidence. Publish only when there is something worth noting.</p></div>
+        <Link href="/admin/field-notes/new" className="btn btn-primary">New Field Note</Link>
+      </div>
+      {error && <p role="alert" className="mt-4 text-sm text-bad">{error}</p>}
+      <div className="mt-6 flex gap-1.5">
+        {[["", "All"], ["published", "Published"], ["draft", "Drafts"]].map(([v, l]) => (
+          <Link key={v} href={v ? `/admin/field-notes?status=${v}` : "/admin/field-notes"} className={`tag ${status === v ? "tag-accent" : ""}`}>{l}</Link>
         ))}
-        {!data?.length && <li className="p-4 text-sm text-ink-3">No field notes yet.</li>}
-      </ul>
+      </div>
+      <ContentTable rows={data ?? []} base="/admin/field-notes" setStatusAction={setFieldNoteStatusAction} emptyLabel={`No field notes${status ? ` with status "${status}"` : ""}.`} />
     </div>
   );
 }

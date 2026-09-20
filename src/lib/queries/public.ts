@@ -101,6 +101,14 @@ export async function getFindingsByTopic(topic: string): Promise<Finding[]> {
   return (data ?? []) as unknown as Finding[];
 }
 
+export async function getFieldNotesByTopic(topic: string): Promise<FieldNote[]> {
+  const sb = createPublicClient();
+  if (!sb) return [];
+  const { data } = await sb.from("field_notes").select("id, slug, title, summary, date").eq("status", "published")
+    .contains("topics", JSON.stringify([topic])).order("date", { ascending: false });
+  return (data ?? []) as FieldNote[];
+}
+
 export async function getPublishedFieldNotes(): Promise<QueryResult<FieldNote[]>> {
   const sb = createPublicClient();
   if (!sb) return noDb([]);
