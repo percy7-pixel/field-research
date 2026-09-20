@@ -33,15 +33,10 @@ export async function subscribeAction(_prev: SubscribeState, formData: FormData)
     // Honeypot filled → pretend success, do nothing.
     return { status: "success", message: "You're following FIELD. Watch your inbox." };
   }
-  const { email, location, ts } = parsed.data;
+  const { email, location } = parsed.data;
 
-  // Timing check: bots submit instantly.
-  if (ts && Date.now() - Number(ts) < 1500) {
-    return { status: "success", message: "You're following FIELD. Watch your inbox." };
-  }
   const last = recent.get(email) ?? 0;
   if (Date.now() - last < 30_000) return { status: "success", message: "You're already on the list." };
-  recent.set(email, Date.now());
 
   const sb = createPublicClient();
   if (!sb) return { status: "error", message: "Signup is temporarily unavailable. Please try again later." };
@@ -54,6 +49,9 @@ export async function subscribeAction(_prev: SubscribeState, formData: FormData)
   }
 
   if (data === "exists") return { status: "success", message: "You're already following FIELD." };
+
+  // Only throttle after the database accepted the signup.
+  recent.set(email, Date.now());
 
   // Fire-and-forget welcome email; failure must not break signup.
   try {
