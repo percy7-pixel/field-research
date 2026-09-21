@@ -11,7 +11,8 @@ export default async function FieldNotePreviewPage({ params }: PageProps<"/admin
   const { data } = await sb.from("field_notes").select("*").eq("id", id).maybeSingle();
   if (!data) notFound();
   const n = data as FieldNote;
-  const related = await getExperimentCardsBySlugs(n.related_experiments ?? []);
+  // Preview mirrors the public page: show only related experiments that are currently published.
+  const related = (await getExperimentCardsBySlugs(n.related_experiments ?? [])).filter((r) => r.status === "published");
   return (
     <div>
       <div className="pb-4 flex items-center justify-between text-sm">

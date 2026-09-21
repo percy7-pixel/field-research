@@ -1,17 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getExperimentCardsBySlugs, getFieldNoteBySlug, getPublishedFieldNotes } from "@/lib/queries/public";
+import { getExperimentCardsBySlugs, getFieldNoteBySlug } from "@/lib/queries/public";
 import { Container } from "@/components/Section";
 import { FieldNoteArticle } from "@/components/FieldNoteArticle";
 import { TrackView } from "@/components/TrackView";
 import { absoluteUrl, site } from "@/lib/site";
 
-export const revalidate = 300;
-
-export async function generateStaticParams() {
-  const { data } = await getPublishedFieldNotes();
-  return data.map((n) => ({ slug: n.slug }));
-}
+// Rendered on request (not statically cached): related experiments must reflect
+// their *current* publication status, and unpublishing an experiment does not
+// revalidate field-note pages.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps<"/field-notes/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -28,7 +26,10 @@ export default async function FieldNotePage({ params }: PageProps<"/field-notes/
   const { slug } = await params;
   const n = await getFieldNoteBySlug(slug);
   if (!n) notFound();
-  const related = await getExperimentCardsBySlugs(n.related_experiments ?? []);
+  // Resolve stored slugs against the experiments table and keep only those currently
+  // published. The stored relationship itself is left intact, so a republished
+  // experiment reappears automatically.
+  const related = (await getExperimentCardsBySlugs(n.related_experiments ?? [])).filter((r) => r.status === "published");
   return (
     <Container>
       <TrackView event="field_note_view" params={{ content_type: "field_note", topic: n.topics?.[0] }} />
