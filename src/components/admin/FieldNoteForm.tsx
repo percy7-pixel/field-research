@@ -4,10 +4,12 @@ import type { FieldNote, Topic } from "@/lib/types";
 import type { ActionState } from "@/app/(admin)/admin/actions";
 import { saveFieldNoteAction } from "@/app/(admin)/admin/content-actions";
 import { Area, Group, StatusPanel, Text } from "./FormFields";
+import { padNumber } from "@/lib/format";
 
-type Props = { note?: FieldNote | null; topics: Topic[]; notice?: string; errorNotice?: string };
+type ExperimentOption = { slug: string; experiment_number: number; title: string; status: string };
+type Props = { note?: FieldNote | null; topics: Topic[]; experiments: ExperimentOption[]; notice?: string; errorNotice?: string };
 
-export function FieldNoteForm({ note: n, topics, notice, errorNotice }: Props) {
+export function FieldNoteForm({ note: n, topics, experiments, notice, errorNotice }: Props) {
   const [state, action, pending] = useActionState(saveFieldNoteAction, { ok: true } as ActionState);
   const isEdit = Boolean(n?.id);
   return (
@@ -33,7 +35,20 @@ export function FieldNoteForm({ note: n, topics, notice, errorNotice }: Props) {
               ))}
             </div>
           </div>
-          <Text id="related_experiments" label="Related experiments" def={(n?.related_experiments ?? []).join(", ")} hint="Comma-separated experiment slugs." />
+          <div>
+            <p className="label">Related experiments</p>
+            {experiments.length ? (
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                {experiments.map((e) => (
+                  <label key={e.slug} className="inline-flex items-start gap-2 text-sm">
+                    <input type="checkbox" name="related_experiments" value={e.slug} defaultChecked={n?.related_experiments?.includes(e.slug)} className="mt-1" />
+                    <span><span className="font-mono text-xs text-ink-3 mr-1.5">{padNumber(e.experiment_number)}</span>{e.title}{e.status !== "published" && <span className="ml-1.5 tag">draft</span>}</span>
+                  </label>
+                ))}
+              </div>
+            ) : <p className="hint">No experiments exist yet.</p>}
+            <p className="hint">Only published experiments are shown on the public page.</p>
+          </div>
           <Text id="date" label="Date" type="date" def={n?.date} />
           <Text id="tags" label="Tags" def={(n?.tags ?? []).join(", ")} hint="Comma-separated." />
           <Text id="featured_image" label="Featured image URL" def={n?.featured_image} hint="Optional. Also used as the OG image." />

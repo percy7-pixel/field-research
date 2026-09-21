@@ -71,8 +71,12 @@ export function publishChecks(v: Partial<ExperimentFormValues>) {
   return problems;
 }
 
+/** Converts FormData to a plain object, preserving repeated keys (e.g. checkbox groups) as arrays. */
 export function formToObject(fd: FormData) {
-  const o: Record<string, FormDataEntryValue | null> = {};
-  for (const [k, v] of fd.entries()) o[k] = v;
+  const o: Record<string, FormDataEntryValue | FormDataEntryValue[] | null> = {};
+  for (const key of new Set(fd.keys())) {
+    const all = fd.getAll(key);
+    o[key] = all.length > 1 ? all : all[0];
+  }
   return o;
 }
