@@ -1,17 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getExperimentBySlug, getExperimentCardsBySlugs, getFindingsByExperiment, getPublishedExperiments, getTopics } from "@/lib/queries/public";
+import { getExperimentBySlug, getExperimentCardsBySlugs, getFindingsByExperiment, getTopics } from "@/lib/queries/public";
 import { ExperimentArticle } from "@/components/ExperimentArticle";
 import { TrackView } from "@/components/TrackView";
 import { absoluteUrl, site } from "@/lib/site";
 import { padNumber } from "@/lib/format";
 
-export const revalidate = 300;
-
-export async function generateStaticParams() {
-  const { data } = await getPublishedExperiments();
-  return data.map((e) => ({ slug: e.slug }));
-}
+// Rendered per request so publication status is always current. Combined with
+// getExperimentBySlug throwing on query failure, a transient database error can
+// never be cached as a 404 for a published experiment.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps<"/experiments/[slug]">): Promise<Metadata> {
   const { slug } = await params;

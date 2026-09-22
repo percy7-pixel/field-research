@@ -25,7 +25,10 @@ export async function getExperimentBySlug(slug: string, includeDrafts = false): 
   if (!sb) return null;
   let q = sb.from("experiments").select("*").eq("slug", slug);
   if (!includeDrafts) q = q.eq("status", "published");
-  const { data } = await q.maybeSingle();
+  const { data, error } = await q.maybeSingle();
+  // A failed query is NOT "not found". Throwing lets Next keep the last good
+  // page (or show error.tsx) instead of caching a 404 for a published item.
+  if (error) throw new Error(`experiments lookup failed: ${error.message}`);
   return (data as Experiment) ?? null;
 }
 
@@ -74,7 +77,8 @@ export async function getPublishedFindings(limit?: number): Promise<QueryResult<
 export async function getFindingBySlug(slug: string): Promise<Finding | null> {
   const sb = createPublicClient();
   if (!sb) return null;
-  const { data } = await sb.from("findings").select(FINDING_COLS).eq("slug", slug).eq("status", "published").maybeSingle();
+  const { data, error } = await sb.from("findings").select(FINDING_COLS).eq("slug", slug).eq("status", "published").maybeSingle();
+  if (error) throw new Error(`findings lookup failed: ${error.message}`);
   return (data as unknown as Finding) ?? null;
 }
 
@@ -119,7 +123,8 @@ export async function getPublishedFieldNotes(): Promise<QueryResult<FieldNote[]>
 export async function getFieldNoteBySlug(slug: string): Promise<FieldNote | null> {
   const sb = createPublicClient();
   if (!sb) return null;
-  const { data } = await sb.from("field_notes").select("*").eq("slug", slug).eq("status", "published").maybeSingle();
+  const { data, error } = await sb.from("field_notes").select("*").eq("slug", slug).eq("status", "published").maybeSingle();
+  if (error) throw new Error(`field_notes lookup failed: ${error.message}`);
   return (data as FieldNote) ?? null;
 }
 
